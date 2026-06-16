@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Geral - Formato</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#333}
+.topbar{background:linear-gradient(135deg,#2c3e50,#3498db);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:1.4rem;font-weight:700}
+.topbar a{color:#fff;text-decoration:none;background:rgba(255,255,255,0.2);padding:8px 16px;border-radius:20px;font-size:0.85rem}
+.btn-refresh{background:rgba(255,255,255,0.2);color:#fff;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:0.85rem}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.kpi{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border-left:4px solid #3498db;text-align:center}
+.kpi .n{font-size:2.2rem;font-weight:800;color:#2c3e50}
+.kpi .l{font-size:0.85rem;color:#666;margin-top:4px}
+.kpi.g{border-left-color:#27ae60}.kpi.o{border-left-color:#f39c12}.kpi.p{border-left-color:#9b59b6}
+.section{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:24px}
+.section h2{font-size:1.1rem;font-weight:700;color:#2c3e50;margin-bottom:16px;border-bottom:2px solid #f0f2f5;padding-bottom:8px}
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;margin-bottom:24px}
+.sp-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.sp-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#fff}
+.fi{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.fl{font-size:0.8rem;color:#555;width:150px;flex-shrink:0}
+.fw{flex:1;background:#f0f2f5;border-radius:4px;height:20px}
+.fb{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px}
+.fb span{font-size:0.72rem;font-weight:700;color:#fff}
+.fc{font-size:0.8rem;font-weight:700;color:#2c3e50;width:20px;text-align:right}
+table{width:100%;border-collapse:collapse}
+th{background:#f8f9fa;padding:10px 12px;text-align:left;font-size:0.82rem;font-weight:700;color:#555;border-bottom:2px solid #e9ecef}
+td{padding:10px 12px;font-size:0.83rem;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fa}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.72rem;font-weight:700;color:#fff}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.fbtn{padding:6px 14px;border:2px solid #e9ecef;border-radius:20px;background:#fff;cursor:pointer;font-size:0.8rem}
+.fbtn.active{border-color:#3498db;background:#3498db;color:#fff}
+.loading{text-align:center;padding:60px;color:#666}
+.spinner{width:40px;height:40px;border:4px solid #f0f2f5;border-top-color:#3498db;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lu{font-size:0.75rem;color:#999;text-align:right;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:16px">
+    <a href="index.html">&larr; Inicio</a>
+    <h1>&#128202; Dashboard Geral</h1>
+  </div>
+  <button class="btn-refresh" onclick="loadAll()">&#128260; Atualizar</button>
+</div>
+<div class="container">
+  <div id="loading" class="loading"><div class="spinner"></div><p>Carregando dados do Trello...</p></div>
+  <div id="content" style="display:none">
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="sp-grid" id="spGrid"></div>
+    <div class="section">
+      <h2>&#128203; Todos os Clientes Ativos</h2>
+      <div class="filters" id="filterBtns"></div>
+      <table><thead><tr><th>Cliente</th><th>Vendedora</th><th>Etapa</th><th>Filial</th></tr></thead>
+      <tbody id="tableBody"></tbody></table>
+      <div class="lu" id="lu"></div>
+    </div>
+  </div>
+  <div id="err"></div>
+</div>
+<script src="config.js"></script>
+<script>
+var BOARDS=[
+  {id:BOARD_IDS.laura,name:'Laura',filial:'Promissao',color:'#e74c3c'},
+  {id:BOARD_IDS.camila,name:'Camila Polo',filial:'Promissao',color:'#9b59b6'},
+  {id:BOARD_IDS.penapoles,name:'Penapoles',filial:'Penapoles',color:'#27ae60'}
+];
+var CMAP={
+  'ATENDIMENTO':'a','PROPOSTA':'a','PRIMEIRO CONTATO':'a',
+  'PROJETO':'p','EM PROJETO':'p','AGUARDANDO PROJETO':'p',
+  'APROVACAO':'ap','AGUARDANDO APROVACAO':'ap','APROVACAO CLIENTE':'ap',
+  'CONTRATO':'c','AGUARDANDO CONTRATO':'c','ASSINATURA':'c',
+  'PRODUCAO':'pr','EM PRODUCAO':'pr','FABRICACAO':'pr','MONTAGEM':'pr',
+  'ENTREGA':'e','AGUARDANDO ENTREGA':'e','ENTREGUE':'e',
+  'POS VENDA':'pos','POS-VENDA':'pos','GARANTIA':'pos',
+  'VENDIDO':'v','VENDIDOS':'v','VENDA REALIZADA':'v',
+  'DESISTIU':'d','CANCELADO':'d'
+};
+var CL={a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
+var CC={a:'#3498db',p:'#9b59b6',ap:'#f39c12',c:'#e67e22',pr:'#27ae60',e:'#16a085',pos:'#2ecc71'};
+function getCat(n){
+  var u=n.toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(var k in CMAP){var kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(u===kn||u.indexOf(kn)>=0)return CMAP[k];}
+  return 'out';
+}
+var allC=[],aF='todos';
+function loadAll(){
+  document.getElementById('loading').style.display='block';
+  document.getElementById('content').style.display='none';
+  document.getElementById('err').innerHTML='';
+  allC=[];
+  var proms=BOARDS.map(function(b){return fetch('https://api.trello.com/1/boards/'+b.id+'/lists?cards=open&key='+TRELLO_KEY+'&token='+TRELLO_TOKEN).then(function(r){return r.json();});});
+  Promise.all(proms).then(function(res){
+    var spd={};
+    res.forEach(function(lists,i){
+      var b=BOARDS[i],cnts={};
+      lists.forEach(function(l){
+        var c=getCat(l.name);
+        cnts[c]=(cnts[c]||0)+l.cards.length;
+        l.cards.forEach(function(card){allC.push({name:card.name,sp:b.name,cat:c,filial:b.filial,color:b.color});});
+      });
+      spd[b.name]={b:b,cnts:cnts};
+    });
+    renderKPIs();renderSP(spd);renderTable();renderFilters();
+    document.getElementById('lu').textContent='Ultima atualizacao: '+new Date().toLocaleString('pt-BR');
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+  }).catch(function(e){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('err').innerHTML='<div style="background:#fee;border:1px solid #fcc;border-radius:8px;padding:16px;color:#c0392b;margin:16px 0">Erro ao carregar: '+e.message+'</div>';
+  });
+}
+function renderKPIs(){
+  var active=allC.filter(function(c){return c.cat!='v'&&c.cat!='d';});
+  var pr=allC.filter(function(c){return c.cat=='pr';});
+  var e=allC.filter(function(c){return c.cat=='e';});
+  document.getElementById('kpiGrid').innerHTML=
+    '<div class="kpi"><div class="n">'+active.length+'</div><div class="l">Clientes Ativos</div></div>'+
+    '<div class="kpi g"><div class="n">'+BOARDS.length+'</div><div class="l">Vendedoras</div></div>'+
+    '<div class="kpi o"><div class="n">'+pr.length+'</div><div class="l">Em Producao</div></div>'+
+    '<div class="kpi p"><div class="n">'+e.length+'</div><div class="l">Aguard. Entrega</div></div>';
+}
+function renderSP(spd){
+  var cats=['a','p','ap','c','pr','e','pos'],h='';
+  for(var name in spd){
+    var d=spd[name],b=d.b,cnts=d.cnts;
+    var total=0;cats.forEach(function(c){if(c!='v'&&c!='d')total+=(cnts[c]||0);});
+    var maxV=1;cats.forEach(function(c){if((cnts[c]||0)>maxV)maxV=cnts[c];});
+    h+='<div class="sp-card"><div class="sp-head"><div class="avatar" style="background:'+b.color+'">'+name[0]+'</div><div><strong>'+name+'</strong><p style="font-size:0.8rem;color:#666">'+b.filial+' - '+total+' clientes</p></div></div>';
+    cats.forEach(function(c){
+      var n=cnts[c]||0,pct=Math.round(n/maxV*100);
+      h+='<div class="fi"><span class="fl">'+CL[c]+'</span><div class="fw"><div class="fb" style="width:'+pct+'%;background:'+CC[c]+'"><span>'+(n>0?n:'')+'</span></div></div><span class="fc">'+n+'</span></div>';
+    });
+    h+='</div>';
+  }
+  document.getElementById('spGrid').innerHTML=h;
+}
+function renderFilters(){
+  var cats=['todos','a','p','ap','c','pr','e','pos'];
+  var labs={todos:'Todos',a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
+  document.getElementById('filterBtns').innerHTML=cats.map(function(c){return '<button class="fbtn '+(aF==c?'active':'')+'" onclick="setF(''+c+'')">'+labs[c]+'</button>';}).join('');
+}
+function setF(f){aF=f;renderTable();renderFilters();}
+function renderTable(){
+  var badgeC={a:'#3498db',p:'#9b59b6',ap:'#f39c12',c:'#e67e22',pr:'#27ae60',e:'#16a085',pos:'#2ecc71'};
+  var labs={a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
+  var list=allC.filter(function(c){
+    if(c.cat=='v'||c.cat=='d')return false;
+    return aF=='todos'||c.cat==aF;
+  });
+  document.getElementById('tableBody').innerHTML=list.length
+    ?list.map(function(c){return '<tr><td>'+c.name+'</td><td><span style="color:'+c.color+';font-weight:700">'+c.sp+'</span></td><td><span class="badge" style="background:'+(badgeC[c.cat]||'#95a5a6')+'">'+((labs[c.cat]||c.cat))+'</span></td><td>'+c.filial+'</td></tr>';}).join('')
+    :'<tr><td colspan="4" style="text-align:center;color:#999;padding:24px">Nenhum cliente nesta etapa</td></tr>';
+}
+loadAll();
+</script>
+</body>
+</html>
