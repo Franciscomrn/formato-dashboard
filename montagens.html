@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Montagens - Formato</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#333}
+.topbar{background:linear-gradient(135deg,#1a5276,#2980b9);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:1.4rem;font-weight:700}
+.topbar a{color:#fff;text-decoration:none;background:rgba(255,255,255,0.2);padding:8px 16px;border-radius:20px;font-size:0.85rem}
+.btn-refresh{background:rgba(255,255,255,0.2);color:#fff;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:0.85rem}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.kpi{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border-left:4px solid #2980b9;text-align:center}
+.kpi .n{font-size:2.2rem;font-weight:800;color:#2c3e50}
+.kpi .l{font-size:0.82rem;color:#666;margin-top:4px}
+.kpi.g{border-left-color:#27ae60}.kpi.o{border-left-color:#f39c12}.kpi.r{border-left-color:#e74c3c}
+.filiais-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:24px;margin-bottom:24px}
+.section{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:24px}
+.section h2{font-size:1.1rem;font-weight:700;color:#2c3e50;margin-bottom:16px;border-bottom:2px solid #f0f2f5;padding-bottom:8px}
+.filial-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.filial-badge{background:#2980b9;color:#fff;border-radius:8px;padding:6px 14px;font-size:0.85rem;font-weight:700}
+.fi{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.fl{font-size:0.85rem;color:#555;width:180px;flex-shrink:0}
+.fw{flex:1;background:#f0f2f5;border-radius:6px;height:24px}
+.fb{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px}
+.fb span{font-size:0.78rem;font-weight:700;color:#fff}
+.fc{font-size:0.85rem;font-weight:700;color:#2c3e50;width:24px;text-align:right}
+table{width:100%;border-collapse:collapse}
+th{background:#f8f9fa;padding:10px 12px;text-align:left;font-size:0.82rem;font-weight:700;color:#555;border-bottom:2px solid #e9ecef}
+td{padding:10px 12px;font-size:0.83rem;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f0f7ff}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.72rem;font-weight:700;color:#fff}
+.loading{text-align:center;padding:60px;color:#666}
+.spinner{width:40px;height:40px;border:4px solid #f0f2f5;border-top-color:#2980b9;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lu{font-size:0.75rem;color:#999;text-align:right;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:16px">
+    <a href="index.html">&larr; Inicio</a>
+    <h1>&#128295; Montagens - Promissao e Penapoles</h1>
+  </div>
+  <button class="btn-refresh" onclick="loadData()">&#128260; Atualizar</button>
+</div>
+<div class="container">
+  <div id="loading" class="loading"><div class="spinner"></div><p>Carregando dados de montagem...</p></div>
+  <div id="content" style="display:none">
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="filiais-grid" id="filiaisGrid"></div>
+    <div class="section">
+      <h2>&#128203; Todas as Montagens</h2>
+      <table><thead><tr><th>Pedido/Cliente</th><th>Filial</th><th>Status</th><th>Lista</th></tr></thead>
+      <tbody id="tableBody"></tbody></table>
+      <div class="lu" id="lu"></div>
+    </div>
+  </div>
+  <div id="err"></div>
+</div>
+<script src="config.js"></script>
+<script>
+var MONT_BOARDS=[
+  {id:BOARD_IDS.montagens_promissao, name:'Promissao', color:'#e74c3c'},
+  {id:BOARD_IDS.montagens_penapoles, name:'Penapoles', color:'#27ae60'}
+];
+var MMAP={
+  'AGUARDANDO':'ag','AGENDADO':'agd','AGENDADA':'agd','EM ANDAMENTO':'and','CONCLUIDO':'ok','CONCLUIDA':'ok','FINALIZADO':'ok','PENDENTE':'pend','INSTALACAO':'inst','INSTALACAO PENDENTE':'inst'
+};
+var ML={ag:'Aguardando',agd:'Agendado',and:'Em Andamento',ok:'Concluido',pend:'Pendente',inst:'Instalacao'};
+var MC={ag:'#f39c12',agd:'#3498db',and:'#9b59b6',ok:'#27ae60',pend:'#e74c3c',inst:'#2980b9'};
+function getMCat(n){
+  var u=n.toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(var k in MMAP){var kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(u===kn||u.indexOf(kn)>=0)return MMAP[k];}
+  return 'out';
+}
+var allM=[];
+function loadData(){
+  document.getElementById('loading').style.display='block';
+  document.getElementById('content').style.display='none';
+  document.getElementById('err').innerHTML='';
+  allM=[];
+  var proms=MONT_BOARDS.map(function(b){return fetch('https://api.trello.com/1/boards/'+b.id+'/lists?cards=open&key='+TRELLO_KEY+'&token='+TRELLO_TOKEN).then(function(r){return r.json();});});
+  Promise.all(proms).then(function(res){
+    var allCnts={};
+    var filiaisData=[];
+    res.forEach(function(lists,i){
+      var b=MONT_BOARDS[i],cnts={};
+      lists.forEach(function(l){
+        var c=getMCat(l.name);
+        cnts[c]=(cnts[c]||0)+l.cards.length;
+        allCnts[c]=(allCnts[c]||0)+l.cards.length;
+        l.cards.forEach(function(card){allM.push({name:card.name,filial:b.name,cat:c,list:l.name,color:b.color});});
+      });
+      filiaisData.push({b:b,cnts:cnts});
+    });
+    renderKPIs(allCnts);renderFiliais(filiaisData);renderTable();
+    document.getElementById('lu').textContent='Ultima atualizacao: '+new Date().toLocaleString('pt-BR');
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+  }).catch(function(e){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('err').innerHTML='<div style="background:#fee;border:1px solid #fcc;border-radius:8px;padding:16px;color:#c0392b;margin:16px 0">Erro: '+e.message+'</div>';
+  });
+}
+function renderKPIs(cnts){
+  var total=0;for(var k in cnts)total+=cnts[k];
+  document.getElementById('kpiGrid').innerHTML=
+    '<div class="kpi"><div class="n">'+total+'</div><div class="l">Total Montagens</div></div>'+
+    '<div class="kpi o"><div class="n">'+(cnts.ag||0)+'</div><div class="l">Aguardando</div></div>'+
+    '<div class="kpi"><div class="n">'+(cnts.agd||0)+'</div><div class="l">Agendadas</div></div>'+
+    '<div class="kpi g"><div class="n">'+(cnts.ok||0)+'</div><div class="l">Concluidas</div></div>'+
+    '<div class="kpi r"><div class="n">'+(cnts.pend||0)+'</div><div class="l">Pendentes</div></div>';
+}
+function renderFiliais(filiaisData){
+  var cats=['ag','agd','and','ok','pend'];
+  var h='';
+  filiaisData.forEach(function(fd){
+    var b=fd.b,cnts=fd.cnts;
+    var total=0;for(var k in cnts)total+=cnts[k];
+    var maxV=1;cats.forEach(function(c){if((cnts[c]||0)>maxV)maxV=cnts[c];});
+    h+='<div class="section"><div class="filial-header"><span class="filial-badge">'+b.name+'</span><span style="color:#666;font-size:0.85rem">'+total+' montagens</span></div>';
+    cats.forEach(function(c){
+      var n=cnts[c]||0,pct=Math.round(n/maxV*100);
+      h+='<div class="fi"><span class="fl">'+ML[c]+'</span><div class="fw"><div class="fb" style="width:'+pct+'%;background:'+MC[c]+'"><span>'+(n>0?n:'')+'</span></div></div><span class="fc">'+n+'</span></div>';
+    });
+    h+='</div>';
+  });
+  document.getElementById('filiaisGrid').innerHTML=h;
+}
+function renderTable(){
+  document.getElementById('tableBody').innerHTML=allM.length
+    ?allM.map(function(m){return '<tr><td><strong>'+m.name+'</strong></td><td><span style="color:'+m.color+';font-weight:700">'+m.filial+'</span></td><td><span class="badge" style="background:'+(MC[m.cat]||'#95a5a6')+'">'+((ML[m.cat]||m.cat))+'</span></td><td style="color:#888;font-size:0.8rem">'+m.list+'</td></tr>';}).join('')
+    :'<tr><td colspan="4" style="text-align:center;color:#999;padding:24px">Nenhuma montagem registrada</td></tr>';
+}
+loadData();
+</script>
+</body>
+</html>
