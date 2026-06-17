@@ -31,8 +31,8 @@ td{padding:10px 12px;font-size:0.83rem;border-bottom:1px solid #f0f2f5}
 tr:hover td{background:#fdf6ff}
 .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.72rem;font-weight:700;color:#fff}
 .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-.fbtn{padding:6px 14px;border:2px solid #e9ecef;border-radius:20px;background:#fff;cursor:pointer;font-size:0.8rem}
-.fbtn.active{border-color:#9b59b6;background:#9b59b6;color:#fff}
+.fbtn{padding:6px 14px;border:2px solid #e9ecef;border-radius:20px;background:#fff;cursor:pointer;font-size:0.8rem;transition:all 0.2s}
+.fbtn.active,.fbtn:hover{border-color:#9b59b6;background:#9b59b6;color:#fff}
 .loading{text-align:center;padding:60px;color:#666}
 .spinner{width:40px;height:40px;border:4px solid #f0f2f5;border-top-color:#9b59b6;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -69,40 +69,36 @@ tr:hover td{background:#fdf6ff}
 <script src="config.js"></script>
 <script>
 var CMAP = {
-  'ATENDIMENTO':'a','PROPOSTA':'a','PRIMEIRO CONTATO':'a',
-  'PROJETO':'p','EM PROJETO':'p','AGUARDANDO PROJETO':'p',
-  'APROVACAO':'ap','AGUARDANDO APROVACAO':'ap','APROVACAO CLIENTE':'ap',
-  'CONTRATO':'c','AGUARDANDO CONTRATO':'c','ASSINATURA':'c',
-  'PRODUCAO':'pr','EM PRODUCAO':'pr','FABRICACAO':'pr','MONTAGEM':'pr',
-  'ENTREGA':'e','AGUARDANDO ENTREGA':'e','ENTREGUE':'e',
-  'POS VENDA':'pos','POS-VENDA':'pos','GARANTIA':'pos',
-  'VENDIDO':'v','VENDIDOS':'v','VENDA REALIZADA':'v',
-  'DESISTIU':'d','CANCELADO':'d'
+  ATENDIMENTO:'a', PROPOSTA:'a', PRIMEIRO_CONTATO:'a',
+  PROJETO:'p', EM_PROJETO:'p', AGUARDANDO_PROJETO:'p',
+  APROVACAO:'ap', AGUARDANDO_APROVACAO:'ap', APROVACAO_CLIENTE:'ap',
+  CONTRATO:'c', AGUARDANDO_CONTRATO:'c', ASSINATURA:'c',
+  PRODUCAO:'pr', EM_PRODUCAO:'pr', FABRICACAO:'pr', MONTAGEM:'pr',
+  ENTREGA:'e', AGUARDANDO_ENTREGA:'e', ENTREGUE:'e',
+  POS_VENDA:'pos', GARANTIA:'pos',
+  VENDIDO:'v', VENDIDOS:'v', VENDA_REALIZADA:'v',
+  DESISTIU:'d', CANCELADO:'d'
 };
-var CL = {a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
-var CC = {a:'#3498db',p:'#9b59b6',ap:'#f39c12',c:'#e67e22',pr:'#27ae60',e:'#16a085',pos:'#2ecc71'};
+var CL = {a:'Atendimento', p:'Projeto', ap:'Aprovacao', c:'Contrato', pr:'Producao', e:'Entrega', pos:'Pos-Venda'};
+var CC = {a:'#3498db', p:'#9b59b6', ap:'#f39c12', c:'#e67e22', pr:'#27ae60', e:'#16a085', pos:'#2ecc71'};
 
 function rmAcc(s) {
-  var map = {'A':[192,193,194,195,196,197],'C':[199],'E':[200,201,202,203],'I':[204,205,206,207],
-    'N':[209],'O':[210,211,212,213,214],'U':[217,218,219,220],
-    'a':[224,225,226,227,228,229],'c':[231],'e':[232,233,234,235],
-    'i':[236,237,238,239],'n':[241],'o':[242,243,244,245,246],'u':[249,250,251,252]};
+  var acc = 'ÀÁÂÃÄÅàáâãäåÇçÈÉÊËèéêëÌÍÎÏìíîïÑñÒÓÔÕÖòóôõöÙÚÛÜùúûü';
+  var rep = 'AAAAAAaaaaaaCcEEEEeeeeIIIIiiiiNnOOOOOoooooUUUUuuuu';
   var out = '';
   for (var i = 0; i < s.length; i++) {
-    var code = s.charCodeAt(i);
-    var found = false;
-    for (var ch in map) {
-      if (map[ch].indexOf(code) >= 0) { out += ch; found = true; break; }
-    }
-    if (!found) out += s[i];
+    var idx = acc.indexOf(s[i]);
+    out += (idx >= 0) ? rep[idx] : s[i];
   }
   return out;
 }
 
 function getCat(n) {
-  var u = rmAcc(n.toUpperCase().trim());
-  for (var k in CMAP) {
-    if (u === k || u.indexOf(k) >= 0) return CMAP[k];
+  var u = rmAcc(n.toUpperCase().trim()).replace(/\s+/g, '_').replace(/-/g, '_');
+  if (CMAP[u] !== undefined) return CMAP[u];
+  var keys = Object.keys(CMAP);
+  for (var i = 0; i < keys.length; i++) {
+    if (u.indexOf(keys[i]) >= 0 || keys[i].indexOf(u) >= 0) return CMAP[keys[i]];
   }
   return 'out';
 }
@@ -141,9 +137,8 @@ function loadData() {
 }
 
 function renderKPIs(cnts) {
-  var cats = ['a','p','ap','c','pr','e','pos'];
   var active = 0;
-  cats.forEach(function(c) { active += (cnts[c] || 0); });
+  ['a','p','ap','c','pr','e','pos'].forEach(function(c) { active += (cnts[c] || 0); });
   document.getElementById('kpiGrid').innerHTML =
     '<div class="kpi"><div class="n">' + active + '</div><div class="l">Clientes Ativos</div></div>' +
     '<div class="kpi"><div class="n">' + (cnts.pr||0) + '</div><div class="l">Em Producao</div></div>' +
@@ -159,23 +154,33 @@ function renderFunnel(cnts) {
   var h = '';
   cats.forEach(function(c) {
     var n = cnts[c] || 0, pct = Math.round(n / maxV * 100);
-    h += '<div class="fi"><span class="fl">' + CL[c] + '</span><div class="fw"><div class="fb" style="width:' + pct + '%;background:' + CC[c] + '"><span>' + (n > 0 ? n : '') + '</span></div></div><span class="fc">' + n + '</span></div>';
+    h += '<div class="fi"><span class="fl">' + CL[c] + '</span>' +
+         '<div class="fw"><div class="fb" style="width:' + pct + '%;background:' + CC[c] + '">' +
+         '<span>' + (n > 0 ? n : '') + '</span></div></div>' +
+         '<span class="fc">' + n + '</span></div>';
   });
   document.getElementById('funnel').innerHTML = h;
 }
 
 function renderFilters() {
   var cats = ['todos','a','p','ap','c','pr','e','pos'];
-  var labs = {todos:'Todos',a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
-  document.getElementById('filterBtns').innerHTML = cats.map(function(c) {
-    return '<button class="fbtn ' + (aF == c ? 'active' : '') + '" onclick="setF('' + c + '')">' + labs[c] + '</button>';
-  }).join('');
+  var labs = {todos:'Todos', a:'Atendimento', p:'Projeto', ap:'Aprovacao', c:'Contrato', pr:'Producao', e:'Entrega', pos:'Pos-Venda'};
+  var h = '';
+  cats.forEach(function(c) {
+    h += '<button class="fbtn ' + (aF === c ? 'active' : '') + '" data-cat="' + c + '">' + labs[c] + '</button>';
+  });
+  document.getElementById('filterBtns').innerHTML = h;
+  document.getElementById('filterBtns').onclick = function(e) {
+    if (e.target && e.target.dataset.cat) {
+      aF = e.target.dataset.cat;
+      renderTable();
+      renderFilters();
+    }
+  };
 }
 
-function setF(f) { aF = f; renderTable(); renderFilters(); }
-
 function renderTable() {
-  var labs = {a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
+  var labs = {a:'Atendimento', p:'Projeto', ap:'Aprovacao', c:'Contrato', pr:'Producao', e:'Entrega', pos:'Pos-Venda'};
   var list = allC.filter(function(c) {
     if (c.cat === 'v' || c.cat === 'd') return false;
     return aF === 'todos' || c.cat === aF;
