@@ -41,6 +41,7 @@ tr:hover td{background:#f8f9fa}
 .spinner{width:40px;height:40px;border:4px solid #f0f2f5;border-top-color:#3498db;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .lu{font-size:0.75rem;color:#999;text-align:right;margin-top:8px}
+.err{background:#fee;border:1px solid #fcc;border-radius:8px;padding:16px;color:#c0392b;margin:16px 0}
 </style>
 </head>
 <body>
@@ -64,16 +65,17 @@ tr:hover td{background:#f8f9fa}
       <div class="lu" id="lu"></div>
     </div>
   </div>
-  <div id="err"></div>
+  <div id="errDiv"></div>
 </div>
 <script src="config.js"></script>
 <script>
-var BOARDS=[
-  {id:BOARD_IDS.laura,name:'Laura',filial:'Promissao',color:'#e74c3c'},
-  {id:BOARD_IDS.camila,name:'Camila Polo',filial:'Promissao',color:'#9b59b6'},
-  {id:BOARD_IDS.penapoles,name:'Penapoles',filial:'Penapoles',color:'#27ae60'}
+var BOARDS = [
+  {id: null, name:'Laura', filial:'Promissao', color:'#e74c3c'},
+  {id: null, name:'Camila Polo', filial:'Promissao', color:'#9b59b6'},
+  {id: null, name:'Penapoles', filial:'Penapoles', color:'#27ae60'}
 ];
-var CMAP={
+
+var CMAP = {
   'ATENDIMENTO':'a','PROPOSTA':'a','PRIMEIRO CONTATO':'a',
   'PROJETO':'p','EM PROJETO':'p','AGUARDANDO PROJETO':'p',
   'APROVACAO':'ap','AGUARDANDO APROVACAO':'ap','APROVACAO CLIENTE':'ap',
@@ -84,82 +86,135 @@ var CMAP={
   'VENDIDO':'v','VENDIDOS':'v','VENDA REALIZADA':'v',
   'DESISTIU':'d','CANCELADO':'d'
 };
-var CL={a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
-var CC={a:'#3498db',p:'#9b59b6',ap:'#f39c12',c:'#e67e22',pr:'#27ae60',e:'#16a085',pos:'#2ecc71'};
-function getCat(n){
-  var u=n.toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  for(var k in CMAP){var kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(u===kn||u.indexOf(kn)>=0)return CMAP[k];}
+var CL = {a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
+var CC = {a:'#3498db',p:'#9b59b6',ap:'#f39c12',c:'#e67e22',pr:'#27ae60',e:'#16a085',pos:'#2ecc71'};
+
+function rmAcc(s) {
+  var map = {'A':[192,193,194,195,196,197],'C':[199],'E':[200,201,202,203],'I':[204,205,206,207],
+    'N':[209],'O':[210,211,212,213,214],'U':[217,218,219,220],
+    'a':[224,225,226,227,228,229],'c':[231],'e':[232,233,234,235],
+    'i':[236,237,238,239],'n':[241],'o':[242,243,244,245,246],'u':[249,250,251,252]};
+  var out = '';
+  for (var i = 0; i < s.length; i++) {
+    var code = s.charCodeAt(i);
+    var found = false;
+    for (var ch in map) {
+      if (map[ch].indexOf(code) >= 0) { out += ch; found = true; break; }
+    }
+    if (!found) out += s[i];
+  }
+  return out;
+}
+
+function getCat(n) {
+  var u = rmAcc(n.toUpperCase().trim());
+  for (var k in CMAP) {
+    if (u === k || u.indexOf(k) >= 0) return CMAP[k];
+  }
   return 'out';
 }
-var allC=[],aF='todos';
-function loadAll(){
-  document.getElementById('loading').style.display='block';
-  document.getElementById('content').style.display='none';
-  document.getElementById('err').innerHTML='';
-  allC=[];
-  var proms=BOARDS.map(function(b){return fetch('https://api.trello.com/1/boards/'+b.id+'/lists?cards=open&key='+TRELLO_KEY+'&token='+TRELLO_TOKEN).then(function(r){return r.json();});});
-  Promise.all(proms).then(function(res){
-    var spd={};
-    res.forEach(function(lists,i){
-      var b=BOARDS[i],cnts={};
-      lists.forEach(function(l){
-        var c=getCat(l.name);
-        cnts[c]=(cnts[c]||0)+l.cards.length;
-        l.cards.forEach(function(card){allC.push({name:card.name,sp:b.name,cat:c,filial:b.filial,color:b.color});});
+
+var allC = [], aF = 'todos';
+
+function loadAll() {
+  // Set board IDs from config.js
+  BOARDS[0].id = BOARD_IDS.laura;
+  BOARDS[1].id = BOARD_IDS.camila;
+  BOARDS[2].id = BOARD_IDS.penapoles;
+
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('errDiv').innerHTML = '';
+  allC = [];
+
+  var proms = BOARDS.map(function(b) {
+    return fetch('https://api.trello.com/1/boards/' + b.id + '/lists?cards=open&key=' + TRELLO_KEY + '&token=' + TRELLO_TOKEN)
+      .then(function(r) { return r.json(); });
+  });
+
+  Promise.all(proms).then(function(results) {
+    var spd = {};
+    results.forEach(function(lists, i) {
+      var b = BOARDS[i], cnts = {};
+      lists.forEach(function(l) {
+        var c = getCat(l.name);
+        cnts[c] = (cnts[c] || 0) + l.cards.length;
+        l.cards.forEach(function(card) {
+          allC.push({name: card.name, sp: b.name, cat: c, filial: b.filial, color: b.color});
+        });
       });
-      spd[b.name]={b:b,cnts:cnts};
+      spd[b.name] = {b: b, cnts: cnts};
     });
-    renderKPIs();renderSP(spd);renderTable();renderFilters();
-    document.getElementById('lu').textContent='Ultima atualizacao: '+new Date().toLocaleString('pt-BR');
-    document.getElementById('loading').style.display='none';
-    document.getElementById('content').style.display='block';
-  }).catch(function(e){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('err').innerHTML='<div style="background:#fee;border:1px solid #fcc;border-radius:8px;padding:16px;color:#c0392b;margin:16px 0">Erro ao carregar: '+e.message+'</div>';
+    renderKPIs();
+    renderSP(spd);
+    renderFilters();
+    renderTable();
+    document.getElementById('lu').textContent = 'Ultima atualizacao: ' + new Date().toLocaleString('pt-BR');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  }).catch(function(e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('errDiv').innerHTML = '<div class="err">Erro ao carregar dados: ' + e.message + '</div>';
   });
 }
-function renderKPIs(){
-  var active=allC.filter(function(c){return c.cat!='v'&&c.cat!='d';});
-  var pr=allC.filter(function(c){return c.cat=='pr';});
-  var e=allC.filter(function(c){return c.cat=='e';});
-  document.getElementById('kpiGrid').innerHTML=
-    '<div class="kpi"><div class="n">'+active.length+'</div><div class="l">Clientes Ativos</div></div>'+
-    '<div class="kpi g"><div class="n">'+BOARDS.length+'</div><div class="l">Vendedoras</div></div>'+
-    '<div class="kpi o"><div class="n">'+pr.length+'</div><div class="l">Em Producao</div></div>'+
-    '<div class="kpi p"><div class="n">'+e.length+'</div><div class="l">Aguard. Entrega</div></div>';
+
+function renderKPIs() {
+  var active = allC.filter(function(c) { return c.cat !== 'v' && c.cat !== 'd'; });
+  var pr = allC.filter(function(c) { return c.cat === 'pr'; });
+  var e = allC.filter(function(c) { return c.cat === 'e'; });
+  document.getElementById('kpiGrid').innerHTML =
+    '<div class="kpi"><div class="n">' + active.length + '</div><div class="l">Clientes Ativos</div></div>' +
+    '<div class="kpi g"><div class="n">' + BOARDS.length + '</div><div class="l">Vendedoras</div></div>' +
+    '<div class="kpi o"><div class="n">' + pr.length + '</div><div class="l">Em Producao</div></div>' +
+    '<div class="kpi p"><div class="n">' + e.length + '</div><div class="l">Aguard. Entrega</div></div>';
 }
-function renderSP(spd){
-  var cats=['a','p','ap','c','pr','e','pos'],h='';
-  for(var name in spd){
-    var d=spd[name],b=d.b,cnts=d.cnts;
-    var total=0;cats.forEach(function(c){if(c!='v'&&c!='d')total+=(cnts[c]||0);});
-    var maxV=1;cats.forEach(function(c){if((cnts[c]||0)>maxV)maxV=cnts[c];});
-    h+='<div class="sp-card"><div class="sp-head"><div class="avatar" style="background:'+b.color+'">'+name[0]+'</div><div><strong>'+name+'</strong><p style="font-size:0.8rem;color:#666">'+b.filial+' - '+total+' clientes</p></div></div>';
-    cats.forEach(function(c){
-      var n=cnts[c]||0,pct=Math.round(n/maxV*100);
-      h+='<div class="fi"><span class="fl">'+CL[c]+'</span><div class="fw"><div class="fb" style="width:'+pct+'%;background:'+CC[c]+'"><span>'+(n>0?n:'')+'</span></div></div><span class="fc">'+n+'</span></div>';
+
+function renderSP(spd) {
+  var cats = ['a','p','ap','c','pr','e','pos'];
+  var h = '';
+  for (var name in spd) {
+    var d = spd[name], b = d.b, cnts = d.cnts;
+    var total = 0;
+    cats.forEach(function(c) { total += (cnts[c] || 0); });
+    var maxV = 1;
+    cats.forEach(function(c) { if ((cnts[c]||0) > maxV) maxV = cnts[c]; });
+    h += '<div class="sp-card"><div class="sp-head"><div class="avatar" style="background:' + b.color + '">' + name[0] + '</div>' +
+      '<div><strong>' + name + '</strong><p style="font-size:0.8rem;color:#666">' + b.filial + ' - ' + total + ' clientes</p></div></div>';
+    cats.forEach(function(c) {
+      var n = cnts[c] || 0, pct = Math.round(n / maxV * 100);
+      h += '<div class="fi"><span class="fl">' + CL[c] + '</span><div class="fw"><div class="fb" style="width:' + pct + '%;background:' + CC[c] + '"><span>' + (n > 0 ? n : '') + '</span></div></div><span class="fc">' + n + '</span></div>';
     });
-    h+='</div>';
+    h += '</div>';
   }
-  document.getElementById('spGrid').innerHTML=h;
+  document.getElementById('spGrid').innerHTML = h;
 }
-function renderFilters(){
-  var cats=['todos','a','p','ap','c','pr','e','pos'];
-  var labs={todos:'Todos',a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
-  document.getElementById('filterBtns').innerHTML=cats.map(function(c){return '<button class="fbtn '+(aF==c?'active':'')+'" onclick="setF(''+c+'')">'+labs[c]+'</button>';}).join('');
+
+function renderFilters() {
+  var cats = ['todos','a','p','ap','c','pr','e','pos'];
+  var labs = {todos:'Todos',a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
+  document.getElementById('filterBtns').innerHTML = cats.map(function(c) {
+    return '<button class="fbtn ' + (aF == c ? 'active' : '') + '" onclick="setF('' + c + '')">' + labs[c] + '</button>';
+  }).join('');
 }
-function setF(f){aF=f;renderTable();renderFilters();}
-function renderTable(){
-  var badgeC={a:'#3498db',p:'#9b59b6',ap:'#f39c12',c:'#e67e22',pr:'#27ae60',e:'#16a085',pos:'#2ecc71'};
-  var labs={a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
-  var list=allC.filter(function(c){
-    if(c.cat=='v'||c.cat=='d')return false;
-    return aF=='todos'||c.cat==aF;
+
+function setF(f) { aF = f; renderTable(); renderFilters(); }
+
+function renderTable() {
+  var labs = {a:'Atendimento',p:'Projeto',ap:'Aprovacao',c:'Contrato',pr:'Producao',e:'Entrega',pos:'Pos-Venda'};
+  var list = allC.filter(function(c) {
+    if (c.cat === 'v' || c.cat === 'd') return false;
+    return aF === 'todos' || c.cat === aF;
   });
-  document.getElementById('tableBody').innerHTML=list.length
-    ?list.map(function(c){return '<tr><td>'+c.name+'</td><td><span style="color:'+c.color+';font-weight:700">'+c.sp+'</span></td><td><span class="badge" style="background:'+(badgeC[c.cat]||'#95a5a6')+'">'+((labs[c.cat]||c.cat))+'</span></td><td>'+c.filial+'</td></tr>';}).join('')
-    :'<tr><td colspan="4" style="text-align:center;color:#999;padding:24px">Nenhum cliente nesta etapa</td></tr>';
+  document.getElementById('tableBody').innerHTML = list.length
+    ? list.map(function(c) {
+        return '<tr><td>' + c.name + '</td>' +
+          '<td><span style="color:' + c.color + ';font-weight:700">' + c.sp + '</span></td>' +
+          '<td><span class="badge" style="background:' + (CC[c.cat]||'#95a5a6') + '">' + (labs[c.cat]||c.cat) + '</span></td>' +
+          '<td>' + c.filial + '</td></tr>';
+      }).join('')
+    : '<tr><td colspan="4" style="text-align:center;color:#999;padding:24px">Nenhum cliente nesta etapa</td></tr>';
 }
+
 loadAll();
 </script>
 </body>
