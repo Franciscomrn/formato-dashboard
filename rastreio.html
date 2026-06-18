@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rastreio de Frota - Formato</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',sans-serif; background:#0f172a; color:#e2e8f0; height:100vh; display:flex; flex-direction:column; }
+    .header { background:linear-gradient(135deg,#1e3a5f,#1e293b); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #334155; flex-shrink:0; }
+    .header h1 { font-size:1.1rem; font-weight:700; color:#60a5fa; }
+    .header a { color:#94a3b8; font-size:0.8rem; text-decoration:none; padding:5px 12px; border:1px solid #334155; border-radius:6px; }
+    .header a:hover { color:#60a5fa; border-color:#60a5fa; }
+    .status-bar { background:#1e293b; padding:8px 20px; display:flex; align-items:center; gap:12px; font-size:0.75rem; color:#64748b; border-bottom:1px solid #334155; flex-shrink:0; flex-wrap:wrap; }
+    .pill { display:inline-flex; align-items:center; gap:6px; background:#0f172a; border:1px solid #334155; border-radius:20px; padding:4px 12px; font-size:0.72rem; font-weight:600; cursor:pointer; transition:.15s; }
+    .pill:hover { border-color:#3b82f6; color:#60a5fa; }
+    .pill.on { border-color:#22c55e; color:#22c55e; }
+    .pill.moving { border-color:#3b82f6; color:#60a5fa; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#475569; flex-shrink:0; }
+    .dot.on { background:#22c55e; animation:blink 1.2s ease-in-out infinite; }
+    .dot.moving { background:#3b82f6; animation:blink 0.6s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    #map { flex:1; }
+    .upd { font-size:.72rem; color:#475569; margin-left:auto; }
+    .leaflet-popup-content-wrapper { background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:10px; }
+    .leaflet-popup-tip { background:#1e293b; }
+    .ptitle { font-weight:700; font-size:.95rem; color:#60a5fa; margin-bottom:6px; }
+    .prow { font-size:.78rem; color:#94a3b8; margin-bottom:3px; }
+    .prow span { color:#e2e8f0; font-weight:600; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <h1>&#x1F6F0;&#xFE0F; Rastreio de Frota</h1>
+  <a href="index.html">&#x2190; Voltar</a>
+</div>
+<div class="status-bar" id="bar"><span>Carregando...</span></div>
+<div id="map"></div>
+<script>
+const VEICULOS = [
+  { nome:'SAVEIRO 1', placa:'QSS4B37', lat:-21.556244, lng:-49.854107, ign:0, vel:0, ico:'&#x1F690;' },
+  { nome:'VAN',       placa:'FORMATO', lat:-21.536713, lng:-49.859706, ign:0, vel:0, ico:'&#x1F68C;' },
+  { nome:'UNO',       placa:'ENM7C89', lat:-21.554644, lng:-49.857684, ign:0, vel:0, ico:'&#x1F697;' },
+  { nome:'Opala',     placa:'Opala',   lat:-21.556393, lng:-49.855493, ign:0, vel:0, ico:'&#x1F699;' }
+];
+
+const map = L.map('map').setView([-21.552, -49.857], 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+}).addTo(map);
+
+const markers = {};
+
+function cor(v) { return v.vel > 0 ? '#3b82f6' : v.ign ? '#22c55e' : '#64748b'; }
+function status(v) { return v.vel > 0 ? 'moving' : v.ign ? 'on' : ''; }
+
+function mkIcon(v) {
+  const c = cor(v);
+  return L.divIcon({
+    html: '<div style="background:'+c+';border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:38px;height:38px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5)"><span style="transform:rotate(45deg);font-size:17px">'+v.ico+'</span></div>',
+    className:'', iconSize:[38,38], iconAnchor:[19,38], popupAnchor:[0,-40]
+  });
+}
+
+function mkPopup(v) {
+  const ign = v.ign ? '&#x1F7E2; Ligada' : '&#x1F534; Desligada';
+  return '<div class="ptitle">'+v.ico+' '+v.nome+'</div>' +
+         '<div class="prow">Placa: <span>'+v.placa+'</span></div>' +
+         '<div class="prow">Ignicao: <span>'+ign+'</span></div>' +
+         '<div class="prow">Velocidade: <span>'+(v.vel > 0 ? v.vel+' km/h' : 'Parado')+'</span></div>';
+}
+
+function renderMarkers() {
+  const bounds = [];
+  VEICULOS.forEach(v => {
+    const icon = mkIcon(v);
+    if (markers[v.nome]) {
+      markers[v.nome].setLatLng([v.lat, v.lng]).setIcon(icon).setPopupContent(mkPopup(v));
+    } else {
+      markers[v.nome] = L.marker([v.lat, v.lng], {icon}).bindPopup(mkPopup(v), {maxWidth:220}).addTo(map);
+    }
+    bounds.push([v.lat, v.lng]);
+  });
+  map.fitBounds(bounds, {padding:[50,50]});
+}
+
+function renderBar() {
+  const now = new Date().toLocaleTimeString('pt-BR');
+  const pills = VEICULOS.map(v => {
+    const sc = status(v);
+    return '<div class="pill '+sc+'" onclick="focus_v(''+v.nome+'')"><div class="dot '+sc+'"></div>'+v.ico+' '+v.nome+'</div>';
+  }).join('');
+  document.getElementById('bar').innerHTML = pills + '<span class="upd">Atualizado: '+now+'</span>';
+}
+
+window.focus_v = function(nome) {
+  const v = VEICULOS.find(x => x.nome===nome);
+  if (v && markers[nome]) { map.setView([v.lat,v.lng],16); markers[nome].openPopup(); }
+};
+
+async function buscarPosicoes() {
+  try {
+    const resp = await fetch('https://vitoria-acessorios.fulltrackapp.com/mapaGeral/buscarRegistrosRastreadosDefinidos', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+      body:'cliente=296743'
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const regs = (data.registros || {})['296743'] || {};
+      Object.values(regs).forEach(r => {
+        const placa = r.ras_veiculos?.ras_vei_placa;
+        const found = VEICULOS.find(v => v.placa === placa);
+        if (found) {
+          found.lat = r.loc[0]; found.lng = r.loc[1];
+          found.ign = r.ras_eve_ignicao; found.vel = r.ras_eve_velocidade;
+        }
+      });
+    }
+  } catch(e) { console.log('API indisponivel, usando ultima posicao conhecida'); }
+  renderMarkers();
+  renderBar();
+}
+
+buscarPosicoes();
+setInterval(buscarPosicoes, 60000);
+</script>
+</body>
+</html>
