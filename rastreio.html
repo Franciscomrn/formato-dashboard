@@ -9,111 +9,94 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:"Segoe UI",sans-serif;background:#0f172a;color:#e2e8f0;height:100vh;display:flex;flex-direction:column;}
-    .hdr{background:linear-gradient(135deg,#1e3a5f,#1e293b);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155;}
+    .hdr{background:linear-gradient(135deg,#1e3a5f,#1e293b);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
     .hdr h1{font-size:1.1rem;font-weight:700;color:#60a5fa;}
-    .hdr a{color:#94a3b8;font-size:0.8rem;text-decoration:none;padding:5px 12px;border:1px solid #334155;border-radius:6px;}
+    .hdr a{color:#94a3b8;font-size:0.8rem;text-decoration:none;padding:4px 10px;border:1px solid #334155;border-radius:6px;}
     .hdr a:hover{color:#60a5fa;border-color:#60a5fa;}
-    .bar{background:#1e293b;padding:8px 20px;display:flex;align-items:center;gap:12px;font-size:0.75rem;border-bottom:1px solid #334155;flex-wrap:wrap;}
-    .pill{display:inline-flex;align-items:center;gap:6px;background:#0f172a;border:1px solid #334155;border-radius:20px;padding:4px 12px;font-size:0.72rem;font-weight:600;cursor:pointer;transition:.15s;}
-    .pill:hover{border-color:#3b82f6;color:#60a5fa;}
-    .pill.on{border-color:#22c55e;color:#22c55e;}
-    .pill.mov{border-color:#3b82f6;color:#60a5fa;}
-    .dot{width:7px;height:7px;border-radius:50%;background:#475569;flex-shrink:0;}
-    .dot.on{background:#22c55e;animation:blink 1.2s ease-in-out infinite;}
-    .dot.mov{background:#3b82f6;animation:blink 0.6s ease-in-out infinite;}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .toolbar{background:#1e293b;padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #334155;}
+    .pill{display:inline-flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #334155;border-radius:20px;padding:4px 12px;cursor:pointer;font-size:0.8rem;transition:all .2s;color:#94a3b8;}
+    .pill:hover{border-color:#3b82f6;color:#60a5fa;background:#1e3a5f;}
+    .pill.moving{border-color:#22c55e;color:#4ade80;}
+    .pill.stopped{border-color:#ef4444;color:#f87171;}
+    .pill.selected{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa;font-weight:600;}
+    .mode-btn{padding:5px 14px;border:1px solid #334155;border-radius:6px;background:#0f172a;color:#94a3b8;cursor:pointer;font-size:0.8rem;transition:all .2s;}
+    .mode-btn.active{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa;}
+    .hist-controls{display:none;align-items:center;gap:8px;margin-left:auto;}
+    .hist-controls.show{display:flex;}
+    .hist-controls label{font-size:0.8rem;color:#94a3b8;}
+    .hist-controls input[type=date]{background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:4px 8px;font-size:0.8rem;}
+    .hist-controls button{padding:5px 14px;border:1px solid #3b82f6;border-radius:6px;background:#1e3a5f;color:#60a5fa;cursor:pointer;font-size:0.8rem;}
+    .hist-controls button:hover{background:#2563eb;color:#fff;}
     #map{flex:1;}
-    .upd{font-size:.72rem;color:#475569;margin-left:auto;}
-    .leaflet-popup-content-wrapper{background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:10px;}
-    .leaflet-popup-tip{background:#1e293b;}
+    .status-bar{background:#1e293b;padding:6px 20px;font-size:0.75rem;color:#64748b;display:flex;gap:16px;flex-wrap:wrap;align-items:center;border-top:1px solid #334155;}
+    .status-bar span{color:#94a3b8;}
+    .loading-overlay{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px 40px;z-index:1000;text-align:center;color:#60a5fa;font-size:0.9rem;}
+    .loading-overlay.show{display:block;}
+    .spinner{border:3px solid #334155;border-top:3px solid #3b82f6;border-radius:50%;width:30px;height:30px;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .hist-info{display:none;background:#1e293b;padding:8px 20px;font-size:0.8rem;color:#94a3b8;border-top:1px solid #334155;align-items:center;gap:16px;flex-wrap:wrap;}
+    .hist-info.show{display:flex;}
+    .legend{display:flex;align-items:center;gap:6px;}
+    .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
   </style>
 </head>
 <body>
 <div class="hdr">
-  <h1>Rastreio de Frota</h1>
-  <a href="index.html">&#x2190; Voltar</a>
+  <h1>Rastreio de Frota - Formato</h1>
+  <a href="index.html">Voltar ao Dashboard</a>
 </div>
-<div class="bar" id="bar"><span>Carregando...</span></div>
-<div id="map"></div>
+<div class="toolbar">
+  <button class="mode-btn active" id="btn-live" onclick="setMode('live')">Tempo Real</button>
+  <button class="mode-btn" id="btn-hist" onclick="setMode('hist')">Historico de Rota</button>
+  <div id="vehicle-pills"></div>
+  <div class="hist-controls" id="hist-controls">
+    <label>Veiculo:</label>
+    <span id="hist-vehicle-name" style="color:#60a5fa;font-size:0.85rem;font-weight:600;">-</span>
+    <label>Data:</label>
+    <input type="date" id="hist-date" value="">
+    <button onclick="loadHistory()">Ver Rota</button>
+    <button onclick="clearHistory()" style="border-color:#ef4444;color:#f87171;background:#1e0a0a;">Limpar</button>
+  </div>
+</div>
+<div class="hist-info" id="hist-info">
+  <div class="legend"><div class="dot" style="background:#22c55e;"></div><span>Inicio da rota</span></div>
+  <div class="legend"><div class="dot" style="background:#ef4444;"></div><span>Fim da rota</span></div>
+  <div class="legend"><div class="dot" style="width:30px;height:4px;border-radius:2px;background:#3b82f6;"></div><span>Rota percorrida</span></div>
+  <span id="hist-stats"></span>
+</div>
+<div style="position:relative;flex:1;display:flex;flex-direction:column;">
+  <div id="map"></div>
+  <div class="loading-overlay" id="loading"><div class="spinner"></div>Carregando rota...</div>
+</div>
+<div class="status-bar">
+  <span id="status-time">Atualizando...</span>
+  <span id="status-mode">Modo: Tempo Real</span>
+</div>
 <script>
-var VEICULOS = [
-  {nome:"SAVEIRO 1",placa:"QSS4B37",lat:-21.556244,lng:-49.854107,ign:0,vel:0},
-  {nome:"VAN",placa:"FORMATO",lat:-21.536713,lng:-49.859706,ign:0,vel:0},
-  {nome:"UNO",placa:"ENM7C89",lat:-21.554644,lng:-49.857684,ign:0,vel:0},
-  {nome:"Opala",placa:"Opala",lat:-21.556393,lng:-49.855493,ign:0,vel:0}
-];
-var map = L.map('map').setView([-21.552,-49.857],14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(map);
-var markers={};
-function cor(v){return v.vel>0?'#3b82f6':v.ign?'#22c55e':'#64748b';}
-function st(v){return v.vel>0?'mov':v.ign?'on':'';}
-function mkIcon(v){
-  var c=cor(v);
-  var h='<div style="background:'+c+';border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:11px;font-weight:900;color:#fff;">'+v.nome.substring(0,3)+'</span></div>';
-  return L.divIcon({html:h,className:'',iconSize:[36,36],iconAnchor:[18,36],popupAnchor:[0,-40]});
-}
-function mkPopup(v){
-  return '<b style="color:#60a5fa">'+v.nome+'</b>'+
-         '<br><small>Placa: <b>'+v.placa+'</b></small>'+
-         '<br><small>Ignicao: <b>'+(v.ign?'Ligada':'Desligada')+'</b></small>'+
-         '<br><small>Velocidade: <b>'+(v.vel>0?v.vel+' km/h':'Parado')+'</b></small>';
-}
-function render(){
-  var bounds=[];
-  for(var i=0;i<VEICULOS.length;i++){
-    var v=VEICULOS[i];
-    var ic=mkIcon(v);
-    if(markers[v.nome]){
-      markers[v.nome].setLatLng([v.lat,v.lng]).setIcon(ic).setPopupContent(mkPopup(v));
-    }else{
-      markers[v.nome]=L.marker([v.lat,v.lng],{icon:ic}).bindPopup(mkPopup(v),{maxWidth:220}).addTo(map);
-    }
-    bounds.push([v.lat,v.lng]);
-  }
-  if(bounds.length>0)map.fitBounds(bounds,{padding:[50,50]});
-}
-function renderBar(){
-  var now=new Date().toLocaleTimeString('pt-BR');
-  var html='';
-  for(var i=0;i<VEICULOS.length;i++){
-    var v=VEICULOS[i];var sc=st(v);
-    html+='<div class="pill '+sc+'" onclick="fv(\'' + v.nome + '\')"><div class="dot '+sc+'"></div>'+v.nome+'</div>';
-  }
-  html+='<span class="upd">Atualizado: '+now+'</span>';
-  document.getElementById('bar').innerHTML=html;
-}
-function fv(nome){
-  for(var i=0;i<VEICULOS.length;i++){
-    if(VEICULOS[i].nome===nome){map.setView([VEICULOS[i].lat,VEICULOS[i].lng],16);if(markers[nome])markers[nome].openPopup();break;}
-  }
-}
-function buscar(){
-  var xhr=new XMLHttpRequest();
-  xhr.withCredentials=true;
-  xhr.open('POST','https://vitoria-acessorios.fulltrackapp.com/mapaGeral/buscarRegistrosRastreadosDefinidos',true);
-  xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-  xhr.setRequestHeader('Accept','application/json');
-  xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
-  xhr.onload=function(){
-    try{
-      var data=JSON.parse(xhr.responseText);
-      var regs=(data.registros||{})['296743']||{};
-      var keys=Object.keys(regs);
-      for(var k=0;k<keys.length;k++){
-        var r=regs[keys[k]];
-        var p=r.ras_veiculos&&r.ras_veiculos.ras_vei_placa;
-        for(var j=0;j<VEICULOS.length;j++){
-          if(VEICULOS[j].placa===p){VEICULOS[j].lat=r.loc[0];VEICULOS[j].lng=r.loc[1];VEICULOS[j].ign=r.ras_eve_ignicao;VEICULOS[j].vel=r.ras_eve_velocidade;}
-        }
-      }
-    }catch(e){}
-    render();renderBar();
-  };
-  xhr.onerror=function(){render();renderBar();};
-  xhr.send('cliente=296743');
-}
-buscar();
-setInterval(buscar,60000);
+var VEHICLES=[{id:1407930,name:'SAVEIRO 1',plate:'QSS4B37',color:'#f59e0b'},{id:1407929,name:'UNO',plate:'ENM7C89',color:'#22c55e'},{id:1347013,name:'Opala',plate:'Opala',color:'#a855f7'},{id:945466,name:'VAN',plate:'FORMATO',color:'#ef4444'}];
+var CLIENT_ID='296743';
+var API_HIST='https://api-fulltrack4.fulltrackapp.com/relatorio/HistoricoPosicao/gerar/';
+var API_POS='https://mapageral.ops.fulltrackapp.com/maps/v2/last-positions/';
+var FT_TOKEN_KEY='token-ftk4';
+var FT_FRAME_SRC='https://vitoria-acessorios.fulltrackapp.com/mapaGeral_v3/';
+var map=L.map('map').setView([-21.546,-49.856],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap'}).addTo(map);
+var markers={},histLayer=null,mode='live',refreshTimer=null,selectedVehicle=null,tokenCache=null,tokenExpiry=0;
+function makeIcon(color,label){var svg='<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44"><path d="M17 2C9.82 2 4 7.82 4 15c0 10 13 27 13 27s13-17 13-27C30 7.82 24.18 2 17 2z" fill="'+color+'" stroke="#fff" stroke-width="2"/><text x="17" y="19" text-anchor="middle" fill="#fff" font-size="9" font-family="Arial" font-weight="bold">'+label+'</text></svg>';return L.divIcon({html:svg,iconSize:[34,44],iconAnchor:[17,44],popupAnchor:[0,-44],className:''});}
+function getToken(cb){var now=Date.now();if(tokenCache&&now<tokenExpiry){cb(tokenCache);return;}var frame=document.getElementById('ft-frame');if(!frame){frame=document.createElement('iframe');frame.id='ft-frame';frame.src=FT_FRAME_SRC;frame.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';document.body.appendChild(frame);}var attempts=0;var check=setInterval(function(){attempts++;try{var raw=frame.contentWindow.localStorage.getItem(FT_TOKEN_KEY);if(raw){var obj=JSON.parse(raw);tokenCache=obj.access_token;tokenExpiry=now+55*60*1000;clearInterval(check);cb(tokenCache);return;}}catch(e){}if(attempts>30){clearInterval(check);cb(null);}},500);}
+function fetchPositions(token,cb){var xhr=new XMLHttpRequest();xhr.open('GET',API_POS,true);xhr.setRequestHeader('Authorization','Bearer '+token);xhr.onload=function(){if(xhr.status===200){try{cb(JSON.parse(xhr.responseText));}catch(e){cb([]);}}else{cb([]);}};xhr.onerror=function(){cb([]);};xhr.send();}
+function updateLiveMarkers(data){var ids=VEHICLES.map(function(v){return v.id;});var found=data.filter(function(d){return ids.indexOf(d.ativo_id)>=0;});found.forEach(function(d){var veh=VEHICLES.filter(function(v){return v.id===d.ativo_id;})[0];if(!veh)return;var lat=d.lat_lng[0],lng=d.lat_lng[1];var shortName=veh.name.split(' ')[0].substring(0,5);var icon=makeIcon(veh.color,shortName);var spd=d.speed?d.speed.val+' km/h':'0 km/h';var ign=d.ignition?'Ligada':'Desligada';var popup='<b style="color:'+veh.color+'">'+veh.name+'</b><br>Placa: '+veh.plate+'<br>Vel: '+spd+'<br>Ignicao: '+ign+'<br><small>No modo Historico, clique para ver rota</small>';if(markers[veh.id]){markers[veh.id].setLatLng([lat,lng]).setPopupContent(popup);}else{markers[veh.id]=L.marker([lat,lng],{icon:icon}).addTo(map).bindPopup(popup);markers[veh.id].on('click',function(){if(mode==='hist'){selectVehicleForHistory(veh);}});}markers[veh.id].vehId=veh.id;});}
+function updatePills(data){var container=document.getElementById('vehicle-pills');container.innerHTML='';VEHICLES.forEach(function(veh){var live=data.filter(function(d){return d.ativo_id===veh.id;})[0];var cls='pill';if(live){cls+=live.ignition?' moving':' stopped';}if(selectedVehicle&&selectedVehicle.id===veh.id)cls+=' selected';var pill=document.createElement('button');pill.className=cls;pill.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+veh.color+';"></span> '+veh.name;pill.onclick=(function(v){return function(){if(mode==='hist'){selectVehicleForHistory(v);}else{if(markers[v.id]){map.setView(markers[v.id].getLatLng(),16);markers[v.id].openPopup();}};};})(veh);container.appendChild(pill);});}
+function liveRefresh(){getToken(function(token){if(!token){document.getElementById('status-time').textContent='Erro: sem token';return;}fetchPositions(token,function(data){updateLiveMarkers(data);var t=new Date();document.getElementById('status-time').textContent='Atualizado: '+t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0')+':'+t.getSeconds().toString().padStart(2,'0');updatePills(data);});});}
+function setMode(m){mode=m;var btnLive=document.getElementById('btn-live');var btnHist=document.getElementById('btn-hist');var histCtrl=document.getElementById('hist-controls');var statusMode=document.getElementById('status-mode');if(m==='live'){btnLive.className='mode-btn active';btnHist.className='mode-btn';histCtrl.className='hist-controls';document.getElementById('hist-info').className='hist-info';statusMode.textContent='Modo: Tempo Real';clearHistory();liveRefresh();if(!refreshTimer)refreshTimer=setInterval(liveRefresh,60000);}else{btnLive.className='mode-btn';btnHist.className='mode-btn active';histCtrl.className='hist-controls show';statusMode.textContent='Modo: Historico de Rota';if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}}}
+function selectVehicleForHistory(veh){selectedVehicle=veh;document.getElementById('hist-vehicle-name').textContent=veh.name;document.getElementById('hist-vehicle-name').style.color=veh.color;var pills=document.querySelectorAll('.pill');pills.forEach(function(p,i){if(VEHICLES[i]&&VEHICLES[i].id===veh.id){if(p.className.indexOf('selected')<0)p.className+=' selected';}else{p.className=p.className.replace(' selected','');}});}
+function loadHistory(){if(!selectedVehicle){alert('Selecione um veiculo clicando no nome ou no marcador no mapa');return;}var dateVal=document.getElementById('hist-date').value;if(!dateVal){alert('Selecione uma data');return;}var parts=dateVal.split('-');var dtInicio=parts[2]+'/'+parts[1]+'/'+parts[0]+' 00:00:00';var dtFim=parts[2]+'/'+parts[1]+'/'+parts[0]+' 23:59:59';document.getElementById('loading').className='loading-overlay show';clearHistory();getToken(function(token){if(!token){document.getElementById('loading').className='loading-overlay';alert('Sem acesso ao token');return;}var body=JSON.stringify({id_cliente:CLIENT_ID,id_ativo:String(selectedVehicle.id),timezone:'America/Sao_Paulo',dt_inicial:dtInicio,dt_final:dtFim,idioma:'pt-BR',limit:2000,offset:0});var xhr=new XMLHttpRequest();xhr.open('POST',API_HIST,true);xhr.setRequestHeader('Content-Type','application/json');xhr.setRequestHeader('Authorization','Bearer '+token);xhr.onload=function(){document.getElementById('loading').className='loading-overlay';if(xhr.status===200){try{var data=JSON.parse(xhr.responseText);drawRoute(data.rows||[],selectedVehicle,dateVal);}catch(e){alert('Erro ao processar dados');}}else{alert('Erro ao buscar historico: '+xhr.status);}};xhr.onerror=function(){document.getElementById('loading').className='loading-overlay';alert('Erro de conexao');};xhr.send(body);});}
+function drawRoute(rows,veh,dateVal){if(!rows||rows.length===0){document.getElementById('hist-stats').textContent='Sem dados para esta data.';document.getElementById('hist-info').className='hist-info show';return;}var coords=rows.map(function(r){return r.lst_localizacao;}).filter(function(c){return c&&c.length===2;});if(coords.length===0){alert('Sem coordenadas validas');return;}histLayer=L.layerGroup().addTo(map);var latlngs=coords.map(function(c){return[c[0],c[1]];});var poly=L.polyline(latlngs,{color:veh.color,weight:4,opacity:0.8}).addTo(histLayer);var startIcon=L.circleMarker(latlngs[latlngs.length-1],{radius:8,color:'#22c55e',fillColor:'#22c55e',fillOpacity:1}).addTo(histLayer);startIcon.bindPopup('<b>Inicio da rota</b><br>'+rows[rows.length-1].dt_gps);var endIcon=L.circleMarker(latlngs[0],{radius:8,color:'#ef4444',fillColor:'#ef4444',fillOpacity:1}).addTo(histLayer);endIcon.bindPopup('<b>Fim da rota</b><br>'+rows[0].dt_gps);map.fitBounds(poly.getBounds(),{padding:[30,30]});var dist=rows[0].vl_hodometro||0;var statsText=veh.name+' | '+dateVal+' | '+coords.length+' posicoes | Distancia aprox: '+dist.toFixed(1)+' km';document.getElementById('hist-stats').textContent=statsText;document.getElementById('hist-info').className='hist-info show';document.getElementById('status-time').textContent='Historico carregado: '+coords.length+' pts';}
+function clearHistory(){if(histLayer){map.removeLayer(histLayer);histLayer=null;}document.getElementById('hist-info').className='hist-info';document.getElementById('hist-stats').textContent='';}
+var today=new Date();var yy=today.getFullYear();var mm=String(today.getMonth()+1).padStart(2,'0');var dd=String(today.getDate()).padStart(2,'0');
+document.getElementById('hist-date').value=yy+'-'+mm+'-'+dd;
+liveRefresh();
+refreshTimer=setInterval(liveRefresh,60000);
 </script>
 </body>
 </html>
