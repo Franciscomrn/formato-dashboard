@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conector Fulltrack - Formato</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:"Segoe UI",sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+    .box{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:40px;max-width:560px;width:90%;}
+    h1{color:#60a5fa;font-size:1.3rem;margin-bottom:8px;}
+    p{color:#94a3b8;font-size:0.9rem;line-height:1.6;margin-bottom:16px;}
+    .step{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:14px 18px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start;}
+    .step-num{background:#1e3a5f;color:#60a5fa;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;}
+    .step p{margin:0;font-size:0.85rem;}
+    .bm-link{display:inline-block;padding:10px 20px;background:#1e3a5f;border:2px solid #3b82f6;border-radius:8px;color:#60a5fa;text-decoration:none;font-size:0.9rem;margin:8px 0;}
+    .bm-link:hover{background:#2563eb;color:#fff;}
+    code{background:#0f172a;padding:2px 6px;border-radius:4px;font-size:0.8rem;color:#f59e0b;}
+    .back{display:inline-block;margin-top:20px;color:#475569;font-size:0.8rem;text-decoration:none;}
+    .back:hover{color:#94a3b8;}
+    .divider{border:none;border-top:1px solid #334155;margin:20px 0;}
+    h2{color:#e2e8f0;font-size:1rem;margin-bottom:12px;}
+  </style>
+</head>
+<body>
+<div class="box">
+  <h1>Conector Fulltrack</h1>
+  <p>Para o Rastreio de Frota funcionar, e necessario conectar ao Fulltrack uma vez por sessao. Siga os passos abaixo:</p>
+
+  <h2>Opcao 1: Bookmarklet (recomendado)</h2>
+  <p>Arraste o botao abaixo para a barra de favoritos do seu navegador. Quando quiser conectar, abra o Fulltrack e clique no favorito.</p>
+
+  <a class="bm-link" id="bm" href="#">Conectar Fulltrack</a>
+  <p style="font-size:0.78rem;color:#475569;">Arraste esse botao para a sua barra de favoritos do navegador.</p>
+
+  <hr class="divider">
+
+  <h2>Opcao 2: Passo a passo manual</h2>
+  <div class="step"><div class="step-num">1</div><p>Abra o sistema Fulltrack em uma aba: <a href="https://vitoria-acessorios.fulltrackapp.com/mapaGeral_v3/" target="_blank" style="color:#3b82f6;">abrir Fulltrack</a></p></div>
+  <div class="step"><div class="step-num">2</div><p>Com o Fulltrack aberto, abra o console do navegador (F12 > Console) e cole este codigo:</p></div>
+  <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;font-family:monospace;font-size:0.75rem;color:#86efac;word-break:break-all;margin-bottom:12px;" id="manual-code">...</div>
+  <div class="step"><div class="step-num">3</div><p>Pressione Enter. Voce sera redirecionado automaticamente de volta ao Rastreio de Frota.</p></div>
+
+  <a class="back" href="rastreio.html">Voltar ao Rastreio de Frota</a>
+</div>
+<script>
+var RETURN='https://franciscomrn.github.io/formato-dashboard/rastreio.html';
+var TOKEN_KEY='token-ftk4';
+var jsCode='var t=JSON.parse(localStorage.getItem("'+TOKEN_KEY+'"));if(t&&t.access_token){window.location.href="'+RETURN+'#tok="+encodeURIComponent(t.access_token);}else{alert("Token nao encontrado. Faca login no Fulltrack primeiro.");}';
+var bmHref='javascript:(function(){'+jsCode+'})();';
+document.getElementById('bm').href=bmHref;
+document.getElementById('bm').title='Arraste para a barra de favoritos';
+document.getElementById('manual-code').textContent=jsCode;
+// Check if we're being accessed from the Fulltrack domain - auto redirect if token present
+try{
+  var raw=localStorage.getItem(TOKEN_KEY);
+  if(!raw){
+    var tok=new URLSearchParams(window.location.search).get('tok')||'';
+  }
+}catch(e){}
+</script>
+</body>
+</html>
