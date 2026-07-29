@@ -118,7 +118,7 @@ function fetchPositions(token,cb){
   var xhr=new XMLHttpRequest();
   xhr.open('GET',API_POS,true);
   xhr.setRequestHeader('Authorization','Bearer '+token);
-  xhr.onload=function(){if(xhr.status===200){try{cb(JSON.parse(xhr.responseText));}catch(e){cb(null,xhr.status);}}else{cb(null,xhr.status);}};
+  xhr.onload=function(){if(xhr.status===200){try{var __d=JSON.parse(xhr.responseText);cb((__d instanceof Array)?__d:(__d.rows||__d.data||__d.results||__d.positions||[]));}catch(e){cb(null,xhr.status)}}else{cb(null,xhr.status);}};
   xhr.onerror=function(){cb(null,0);};
   xhr.send();
 }
